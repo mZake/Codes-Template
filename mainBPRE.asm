@@ -4,7 +4,7 @@
 //---------------------------------------------------
 
 //hooks
-.include "hooks/BPRE/specials_ptr.s"
+//None
 
 .align 4
 .org insertinto
