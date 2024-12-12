@@ -64,3 +64,187 @@ static void PSS_SetupExpBar(void); // UpdateExpBarObjs
 static void PSS_UnloadMarkings(void); // PokeSum_DestroyMonMarkingsSprite
 static void PSS_GetMarkings(void); // PokeSum_UpdateMonMarkingsAnim
 static void PSS_ScrollPSSBackground(void);
+
+struct PokemonSummaryScreenData
+{
+    u8 window[7];
+
+    u8 spriteId_0;
+    u8 spriteId_1;
+    u8 spriteId_2;
+
+    u8 task;
+    u8 unk301C;
+
+    u8 unk3020;
+
+    bool32 isEnemyParty; /* 0x3024 */
+
+    struct PokeSummary
+    {
+        u8 nickname[POKEMON_NAME_LENGTH + 1];
+        u8 specieName[POKEMON_NAME_LENGTH + 1];
+        u8 ot_name[12];
+        u8 unk304C[2][12];
+
+        u8 dexNum[5];
+        u8 ot_id[7];
+        u8 heldItem[ITEM_NAME_LENGTH + 1];
+
+        u8 genderSymbol[3];
+        u8 level[7];
+        u8 unk3090[9];
+        u8 unk309C[5][5];
+
+        u8 unk30B8[5][11];
+        u8 unk30F0[5][11];
+        u8 moveName[5][MOVE_NAME_LENGTH + 1];
+        u8 power[5][5];
+        u8 unk3188[5][5];
+
+        u8 unk31A4[9];
+        u8 unk31B0[9];
+
+        u8 abilityName[13];
+        u8 abilityDescription[52];
+    } summary;
+
+    u8 isEgg; /* 0x3200 */
+    u8 isBadEgg; /* 0x3204 */
+
+    u8 mode; /* 0x3208 */
+    u8 unk320C; /* 0x320C */
+    u8 lastIndex; /* 0x3210 */
+    u8 curPageIndex; /* 0x3214 */
+    u8 unk3218; /* 0x3218 */
+    u8 isBoxMon; /* 0x321C */
+    u8 typeIcons[2]; /* 0x3220 */
+
+    u8 unk3224; /* 0x3224 */
+    u8 unk3228; /* 0x3228 */
+    u8 unk322C; /* 0x322C */
+    u8 unk3230; /* 0x3230 */
+
+    u8 lockMovesFlag; /* 0x3234 */
+
+    u8 unk3238; /* 0x3238 */
+    u8 unk323C; /* 0x323C */
+    u8 unk3240; /* 0x3240 */
+    u8 unk3244; /* 0x3244 */
+    u8 unk3248; /* 0x3248 */
+    s16 unk324C; /* 0x324C */
+
+    u16 move[5]; /* 0x3250 */
+    u16 currentMove[5]; /* 0x325A */
+    u8 unk3264; /* 0x3264 */
+    u8 unk3268; /* 0x3268 */
+
+    u8 monStatus; /* 0x326C */
+
+    u8 state3270; /* 0x3270 */
+    u8 state3274; /* 0x3274 */
+    u8 unk3278; /* 0x3278 */
+    u8 state; /* 0x327C */
+    u8 unk3280; /* 0x3280 */
+    u8 unk3284; /* 0x3284 */
+    u8 unk3288; /* 0x3288 */
+    u8 unk328C; /* 0x328C */
+
+    struct Pokemon currentMon; /* 0x3290 */
+
+    union
+    {
+        struct Pokemon * mons;
+        struct BoxPokemon * boxMons;
+    } monList;
+
+    MainCallback savedCallback;
+    struct Sprite * markingSprite;
+
+    u8 unk3300[2]; /* 0x3300 */
+    u8 unk3304[3]; /* 0x3304 */
+    u8 unused[200]; /* 0x3304 */
+};
+
+struct Struct203B144
+{
+    u16 unk00;
+    u16 unk02;
+    u16 tileTag;
+    u16 palTag;
+    u16 unk08;
+    u16 unk0A;
+    u16 unk0C;
+    u16 unk0E;
+    u16 unk10;
+
+    u16 unk12[5];
+    u16 unk1C[5];
+
+    u16 unk26;
+};
+
+struct Struct203B160
+{
+    struct Sprite * sprites[11]; /* 0x00 */
+    u16 cordX[11]; /* 0x2c */
+    u16 tileTag; /* 0x42 */
+    u16 palTag; /* 0x44 */
+};
+
+struct Struct203B15C
+{
+    struct Sprite * sprites[10]; /* 0x00 */
+    u16 cordX[10]; /* 0x28 */
+    u16 unk3C; /* 0x3c */
+    u16 unk3E; /* 0x3e */
+};
+
+struct Struct203B170
+{
+    u8 unk00; /* 0x00 */
+    u8 tileTag; /* 0x04 */
+    u8 unk08; /* 0x08 */
+};
+
+struct Struct203B148
+{
+    struct Sprite * sprite; /* 0x00 */
+    u16 tileTag; /* 0x04 */
+    u16 palTag; /* 0x06 */
+    u16 unk08; /* 0x08 */
+};
+
+struct Struct203B158
+{
+    struct Sprite * sprite; /* 0x00 */
+    u16 tileTag; /* 0x04 */
+    u16 palTag; /* 0x06 */
+};
+
+struct Struct203B164
+{
+    struct Sprite * sprite; /* 0x00 */
+    u16 tileTag; /* 0x04 */
+    u16 palTag; /* 0x06 */
+};
+
+struct Struct203B168
+{
+    struct Sprite * sprite; /* 0x00 */
+    u16 tileTag; /* 0x04 */
+    u16 palTag; /* 0x06 */
+};
+
+extern struct PokemonSummaryScreenData *sMonSummaryScreen;
+extern struct Struct203B144 *sUnknown_203B144;
+extern struct Struct203B148 *sUnknown_203B148[4];
+extern struct Struct203B158 *sStatusIconSummaryScreen;
+extern struct Struct203B15C *sHpBarSummaryScreen;
+extern struct Struct203B160 *sExpBarSummaryScreen;
+extern struct Struct203B164 *sUnknown_203B164;
+extern struct Struct203B168 *sUnknown_203B168;
+extern struct Struct203B170 *sUnknown_203B170;
+extern u8 sLastViewedMonIndex;
+extern u8 sUnknown_203B16D;
+extern u8 sUnknown_203B16E;

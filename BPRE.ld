@@ -987,5 +987,16 @@ StartSpriteAnimIfDifferent = 0x080083a4|1;
 StartSpriteAffineAnim = 0x0800843c|1;
 StartSpriteAffineAnimIfDifferent = 0x08008468|1;
 
-
-
+/* Summary Screen */
+sMonSummaryScreen = 0x203B140;
+sUnknown_203B144 = 0x203B144;
+sUnknown_203B148 = 0x203B148;
+sStatusIconSummaryScreen = 0x203B158;
+sHpBarSummaryScreen = 0x203B15C;
+sExpBarSummaryScreen = 0x203B160;
+sUnknown_203B164 = 0x203B164;
+sUnknown_203B168 = 0x203B168;
+sUnknown_203B170 = 0x203B170;
+sLastViewedMonIndex = 0x203B16C;
+sUnknown_203B16D = 0x203B16D;
+sUnknown_203B16E = 0x203B16E;
