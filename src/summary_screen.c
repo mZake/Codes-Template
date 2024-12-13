@@ -521,3 +521,478 @@ static const u16 * const sHpBarPalettes[] =
     gPal1SummaryScreen,
     gPal2SummaryScreen,
 };
+
+// The functions below must be hooked probably
+
+static void PSS_LoadMonSprite(void)
+{
+    u16 spriteId;
+    u16 species;
+    u32 personality;
+    u32 trainerId;
+
+    sUnknown_203B170 = AllocZeroed(sizeof(struct Struct203B170));
+
+    species = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_SPECIES2);
+    personality = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_PERSONALITY);
+    trainerId = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_OT_ID);
+
+    if (sMonSummaryScreen->savedCallback == CB2_ReturnToTradeMenuFromSummary)
+    {
+        if (sMonSummaryScreen->isEnemyParty == TRUE)
+            spriteId = CreateMonPicSprite(species, trainerId, personality, 1, 204, 78, 12, 0xffff, 1);
+        else
+            spriteId = CreateMonPicSprite_HandleDeoxys(species, trainerId, personality, 1, 204, 78, 12, 0xffff);
+    }
+    else
+    {
+        if (ShouldIgnoreDeoxysForm(3, sLastViewedMonIndex))
+            spriteId = CreateMonPicSprite(species, trainerId, personality, 1, 204, 78, 12, 0xffff, 1);
+        else
+            spriteId = CreateMonPicSprite_HandleDeoxys(species, trainerId, personality, 1, 204, 78, 12, 0xffff);
+    }
+
+    FreeSpriteOamMatrix(&gSprites[spriteId]);
+    sMonSummaryScreen->spriteId_1 = spriteId;
+    PSS_SetInvisibleMonSprite(1);
+    sub_8139AAC(spriteId);
+}
+
+static void PSS_LoadPokeball(void)
+{
+    u16 ballItemId;
+    u8 ballId;
+
+    if (!sMonSummaryScreen->isEgg)
+        ballItemId = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_POKEBALL);
+    else
+        ballItemId = 0;
+
+    ballId = ItemIdToBallId(ballItemId);
+    LoadBallGfx(ballId);
+
+    sMonSummaryScreen->spriteId_0 = CreateSprite(&gBallSpriteTemplates[ballId], 232, 39, 0);
+    gSprites[sMonSummaryScreen->spriteId_0].callback = SpriteCallbackDummy;
+    gSprites[sMonSummaryScreen->spriteId_0].oam.priority = 0;
+
+    PSS_SetInvisiblePokeball(1);
+}
+
+static void PSS_LoadMonIcon(void)
+{
+    u16 species;
+    u32 personality;
+
+    species = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_SPECIES2);
+    personality = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_PERSONALITY);
+
+    SafeLoadMonIconPalette(species);
+
+    if (sMonSummaryScreen->savedCallback == CB2_ReturnToTradeMenuFromSummary)
+    {
+        if (sMonSummaryScreen->isEnemyParty == TRUE)
+            sMonSummaryScreen->spriteId_2 = CreateMonIcon(species, SpriteCallbackDummy, 140, 28, 0, personality, 0);
+        else
+            sMonSummaryScreen->spriteId_2 = CreateMonIcon(species, SpriteCallbackDummy, 140, 28, 0, personality, 1);
+    }
+    else
+    {
+        if (ShouldIgnoreDeoxysForm(3, sLastViewedMonIndex))
+            sMonSummaryScreen->spriteId_2 = CreateMonIcon(species, SpriteCallbackDummy, 140, 28, 0, personality, 0);
+        else
+            sMonSummaryScreen->spriteId_2 = CreateMonIcon(species, SpriteCallbackDummy, 140, 28, 0, personality, 1);
+    }
+
+    if (!IsPokeSpriteNotFlipped(species))
+        gSprites[sMonSummaryScreen->spriteId_2].hFlip = FALSE;
+    else
+        gSprites[sMonSummaryScreen->spriteId_2].hFlip = TRUE;
+
+    sub_8139EE4(1);
+}
+
+static void PSS_LoadMovesSelectCursor(u16 tileTag, u16 palTag)
+{
+    u8 i;
+    u8 spriteId;
+    void * gfxBufferPtrs[2];
+    gfxBufferPtrs[0] = AllocZeroed(0x20 * 64);
+    gfxBufferPtrs[1] = AllocZeroed(0x20 * 64);
+
+    sUnknown_203B148[0] = AllocZeroed(sizeof(struct Struct203B148));
+    sUnknown_203B148[1] = AllocZeroed(sizeof(struct Struct203B148));
+    sUnknown_203B148[2] = AllocZeroed(sizeof(struct Struct203B148));
+    sUnknown_203B148[3] = AllocZeroed(sizeof(struct Struct203B148));
+
+    LZ77UnCompWram(gSelectCursorGfxLeft, gfxBufferPtrs[0]);
+    LZ77UnCompWram(gSelectCursorGfxRight, gfxBufferPtrs[1]);
+
+    for (i = 0; i < 4; i++)
+    {
+        struct SpriteSheet sheet = {
+            .data = gfxBufferPtrs[i % 2],
+            .size = 0x20 * 64,
+            .tag = tileTag + i
+        };
+
+        struct SpritePalette palette = {.data = gSelectCursorPalette, .tag = palTag};
+        struct SpriteTemplate template = {
+            .tileTag = tileTag + i,
+            .paletteTag = palTag,
+            .oam = &sUnknown_846398C,
+            .anims = sUnknown_84639A4,
+            .images = NULL,
+            .affineAnims = gDummySpriteAffineAnimTable,
+            .callback = sub_813A124,
+        };
+
+        LoadSpriteSheet(&sheet);
+        LoadSpritePalette(&palette);
+
+        spriteId = CreateSprite(&template, 64 * (i % 2) + 32, sUnknown_203B16D * 28 + 34, i % 2);
+        sUnknown_203B148[i]->sprite = &gSprites[spriteId];
+        sUnknown_203B148[i]->tileTag = i;
+        sUnknown_203B148[i]->palTag = tileTag + i;
+        sUnknown_203B148[i]->unk08 = palTag;
+        sUnknown_203B148[i]->sprite->subpriority = i;
+
+        if (i > 1)
+            StartSpriteAnim(sUnknown_203B148[i]->sprite, 1);
+    }
+
+    sub_813A0E8(1);
+
+    FREE_AND_SET_NULL_IF_SET(gfxBufferPtrs[0]);
+    FREE_AND_SET_NULL_IF_SET(gfxBufferPtrs[1]);
+}
+
+static void PSS_ShowIconStatus(void)
+{
+    sMonSummaryScreen->monStatus = PSS_CheckMonStatus(GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_STATUS));
+
+    if (sMonSummaryScreen->monStatus == AILMENT_NONE)
+    {
+        PSS_SetInvisibleIconStatus(1);
+        return;
+    }
+
+    StartSpriteAnim(sStatusIconSummaryScreen->sprite, sMonSummaryScreen->monStatus - 1);
+    PSS_SetInvisibleIconStatus(0);
+}
+
+static void PSS_SetInvisibleIconStatus(u8 invisible)
+{
+    if (sMonSummaryScreen->monStatus == AILMENT_NONE || sMonSummaryScreen->isEgg)
+        sStatusIconSummaryScreen->sprite->invisible = TRUE;
+    else
+        sStatusIconSummaryScreen->sprite->invisible = invisible;
+
+    if (sMonSummaryScreen->curPageIndex == PSS_PAGE_MOVES_INFO)
+    {
+        if (sStatusIconSummaryScreen->sprite->pos1.y != 45)
+        {
+            sStatusIconSummaryScreen->sprite->pos1.x = 16;
+            sStatusIconSummaryScreen->sprite->pos1.y = 45;
+            return;
+        }
+    }
+    else if (sStatusIconSummaryScreen->sprite->pos1.y != 38)
+    {
+        sStatusIconSummaryScreen->sprite->pos1.x = 214;
+        sStatusIconSummaryScreen->sprite->pos1.y = 38;
+        return;
+    }
+}
+
+static void PSS_LoadHpBar(u16 tileTag, u16 palTag)
+{
+    u8 i;
+    u8 spriteId;
+    void * gfxBufferPtr;
+    u32 curHp;
+    u32 maxHp;
+    u8 hpBarPalTagOffset = 0;
+
+    sHpBarSummaryScreen = AllocZeroed(sizeof(struct Struct203B15C));
+    gfxBufferPtr = AllocZeroed(0x20 * 12);
+    if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		LZ77UnCompWram(gHpBarSummaryScreen, gfxBufferPtr);
+    if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		LZ77UnCompWram(gHpBarSummaryScreenSpa, gfxBufferPtr);
+
+    curHp = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_HP);
+    maxHp = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MAX_HP);
+
+    if (maxHp / 4 > curHp)
+        hpBarPalTagOffset = 2;
+    else if (maxHp / 2 > curHp)
+        hpBarPalTagOffset = 1;
+
+    if (gfxBufferPtr != NULL)
+    {
+        struct SpriteSheet sheet = {
+            .data = gfxBufferPtr,
+            .size = 0x20 * 12,
+            .tag = tileTag
+        };
+
+        struct SpritePalette palette1 = {.data = sHpBarPalettes[0], .tag = palTag};
+        struct SpritePalette palette2 = {.data = sHpBarPalettes[1], .tag = palTag + 1};
+        struct SpritePalette palette3 = {.data = sHpBarPalettes[2], .tag = palTag + 2};
+
+        LoadSpriteSheet(&sheet);
+        LoadSpritePalette(&palette1);
+        LoadSpritePalette(&palette2);
+        LoadSpritePalette(&palette3);
+    }
+
+    for (i = 0; i < 9; i++)
+    {
+        struct SpriteTemplate template = {
+            .tileTag = tileTag,
+            .paletteTag = palTag + hpBarPalTagOffset,
+            .oam = &sUnknown_8463A14,
+            .anims = sUnknown_8463A7C,
+            .images = NULL,
+            .affineAnims = gDummySpriteAffineAnimTable,
+            .callback = SpriteCallbackDummy,
+        };
+
+        sHpBarSummaryScreen->cordX[i] = i * 8 + 81;
+        spriteId = CreateSprite(&template, sHpBarSummaryScreen->cordX[i], 33, 0);
+        sHpBarSummaryScreen->sprites[i] = &gSprites[spriteId];
+        sHpBarSummaryScreen->sprites[i]->invisible = FALSE;
+        sHpBarSummaryScreen->sprites[i]->oam.priority = 2;
+        sHpBarSummaryScreen->unk3C = tileTag;
+        sHpBarSummaryScreen->unk3E = palTag;
+        StartSpriteAnim(sHpBarSummaryScreen->sprites[i], 8);
+    }
+
+    PSS_SetupHpBar();
+    PSS_SetInvisibleHpBar(1);
+
+    FREE_AND_SET_NULL_IF_SET(gfxBufferPtr);
+}
+
+// The change in this one is minimal may it don t need to be hooked
+static void PSS_LoadExpBar(u16 tileTag, u16 palTag)
+{
+    u8 i;
+    u8 spriteId;
+    void * gfxBufferPtr;
+
+    sExpBarSummaryScreen = AllocZeroed(sizeof(struct Struct203B160));
+    gfxBufferPtr = AllocZeroed(0x20 * 12);
+
+    LZ77UnCompWram(gExpBarSummaryScreen, gfxBufferPtr);
+    if (gfxBufferPtr != NULL)
+    {
+        struct SpriteSheet sheet = {
+            .data = gfxBufferPtr,
+            .size = 0x20 * 12,
+            .tag = tileTag
+        };
+
+        struct SpritePalette palette = {.data = gPal0SummaryScreen, .tag = palTag};
+        LoadSpriteSheet(&sheet);
+        LoadSpritePalette(&palette);
+    }
+
+    for (i = 0; i < 11; i++)
+    {
+        struct SpriteTemplate template = {
+            .tileTag = tileTag,
+            .paletteTag = palTag,
+            .oam = &sUnknown_8463A14,
+            .anims = sUnknown_8463A7C,
+            .images = NULL,
+            .affineAnims = gDummySpriteAffineAnimTable,
+            .callback = SpriteCallbackDummy,
+        };
+
+        sExpBarSummaryScreen->cordX[i] = i * 8 + 156;
+        spriteId = CreateSprite(&template, sExpBarSummaryScreen->cordX[i], 130, 0);
+        sExpBarSummaryScreen->sprites[i] = &gSprites[spriteId];
+        sExpBarSummaryScreen->sprites[i]->oam.priority = 2;
+        sExpBarSummaryScreen->tileTag = tileTag;
+        sExpBarSummaryScreen->palTag = palTag;
+    }
+
+    PSS_SetupExpBar();
+    PSS_SetInvisibleExpBar(1);
+
+    FREE_AND_SET_NULL_IF_SET(gfxBufferPtr);
+}
+
+static void PSS_LoadShinyIndicator(u16 tileTag, u16 palTag)
+{
+    u16 spriteId;
+    void * gfxBufferPtr;
+
+    sUnknown_203B168 = AllocZeroed(sizeof(struct Struct203B168));
+    gfxBufferPtr = AllocZeroed(0x20 * 2);
+
+    LZ77UnCompWram(gShinyIndicatorGfx, gfxBufferPtr);
+
+    if (sUnknown_203B168 != NULL)
+    {
+        struct SpriteSheet sheet = {
+            .data = gfxBufferPtr,
+            .size = 0x20 * 2,
+            .tag = tileTag
+        };
+
+        struct SpritePalette palette = {.data = gShinyIndicatorPalette, .tag = palTag};
+        struct SpriteTemplate template = {
+            .tileTag = tileTag,
+            .paletteTag = palTag,
+            .oam = &sUnknown_8463B30,
+            .anims = sUnknown_8463B40,
+            .images = NULL,
+            .affineAnims = gDummySpriteAffineAnimTable,
+            .callback = SpriteCallbackDummy,
+        };
+
+        LoadSpriteSheet(&sheet);
+        LoadSpritePalette(&palette);
+        spriteId = CreateSprite(&template, 166, 50, 0);
+        sUnknown_203B168->sprite = &gSprites[spriteId];
+        sUnknown_203B168->tileTag = tileTag;
+        sUnknown_203B168->palTag = palTag;
+    }
+
+    sub_813AEB0(1);
+    sub_813AF50();
+
+    FREE_AND_SET_NULL_IF_SET(gfxBufferPtr);
+}
+
+static void sub_813AEB0(u8 invisible)
+{
+    if (IsMonShiny(&sMonSummaryScreen->currentMon) == TRUE
+        && !sMonSummaryScreen->isEgg)
+        sUnknown_203B168->sprite->invisible = invisible;
+    else
+        sUnknown_203B168->sprite->invisible = TRUE;
+
+    if (sMonSummaryScreen->curPageIndex == PSS_PAGE_MOVES_INFO)
+    {
+        sUnknown_203B168->sprite->pos1.x = 126;
+        sUnknown_203B168->sprite->pos1.y = 20;
+    }
+    else
+    {
+        sUnknown_203B168->sprite->pos1.x = 166;
+        sUnknown_203B168->sprite->pos1.y = 50;
+    }
+}
+
+static void PSS_LoadMarkings(void)
+{
+    u32 markings = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MARKINGS);
+
+    DestroySpriteAndFreeResources(sMonSummaryScreen->markingSprite);
+    sMonSummaryScreen->markingSprite = CreateMonMarkingSprite_SelectCombo(TAG_PSS_UNK_8C, TAG_PSS_UNK_8C, sUnknown_84636E0);
+
+    if (sMonSummaryScreen->markingSprite != NULL)
+    {
+        StartSpriteAnim(sMonSummaryScreen->markingSprite, markings);
+        sMonSummaryScreen->markingSprite->pos1.x = 208;
+        sMonSummaryScreen->markingSprite->pos1.y = 114;
+    }
+
+    PSS_SetInvisibleMarkings(1);
+}
+
+static void sub_813B3F0(u8 id)
+{
+    switch (sMonSummaryScreen->unk328C)
+    {
+    case 0:
+        StopCryAndClearCrySongs();
+        sUnknown_203B16D = 0;
+        sUnknown_203B16E = 0;
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 1:
+        PSS_UnloadMonSprite();
+        sub_8139F20();
+        sub_8139D90();
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 2:
+        sub_8138B8C(&sMonSummaryScreen->currentMon);
+
+        sMonSummaryScreen->isEgg = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_IS_EGG);
+        sMonSummaryScreen->isBadEgg = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_SANITY_IS_BAD_EGG);
+
+        if (sMonSummaryScreen->isBadEgg == TRUE)
+            sMonSummaryScreen->isEgg = TRUE;
+
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 3:
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 4:
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 5:
+        PSS_GetDataPokemon();
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 6:
+        if (!sMonSummaryScreen->isEgg)
+            PSS_GetStatsPokemon();
+
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 7:
+        if (!sMonSummaryScreen->isEgg)
+            sub_81367B0();
+
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 8:
+        PSS_AddTextToWin3();
+        PSS_AddTextToWin4();
+        PSS_AddTextToWin5();
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 9:
+        PSS_DrawMonMoveIcon();
+        sub_8138538();
+        sub_8137D28(sMonSummaryScreen->curPageIndex);
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 10:
+        CopyWindowToVram(sMonSummaryScreen->window[0], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[1], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[2], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[3], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[4], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[5], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[6], 2);
+        CopyBgTilemapBufferToVram(0);
+        sMonSummaryScreen->unk328C++;
+        break;
+    case 11:
+        if (!Overworld_LinkRecvQueueLengthMoreThan2() && !sub_800B270())
+        {
+            sub_813AFC4();
+            PSS_PlayMonCry();
+            sMonSummaryScreen->unk328C++;
+        }
+        break;
+    default:
+        sMonSummaryScreen->unk328C = 0;
+        DestroyTask(id);
+        break;
+    }
+}
+
+static void PSS_ScrollPSSBackground(void)
+{
+    ChangeBgX(2, 80, 1);
+    ChangeBgY(2, 80, 1);
+}
