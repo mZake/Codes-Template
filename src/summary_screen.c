@@ -248,3 +248,276 @@ extern struct Struct203B170 *sUnknown_203B170;
 extern u8 sLastViewedMonIndex;
 extern u8 sUnknown_203B16D;
 extern u8 sUnknown_203B16E;
+
+static const struct BgTemplate SummayScreenBgTemplate[] = 
+{
+	{ //Text
+		.bg = 0,
+		.charBaseIndex = 1,
+		.mapBaseIndex = 29,
+		.screenSize = 0,
+		.paletteMode = 0,
+		.priority = 0,
+		.baseTile = 0	   
+	},
+	{ //Page Showed
+	 	.bg = 1,
+	 	.charBaseIndex = 0,
+	 	.mapBaseIndex = 30,
+	 	.screenSize = 0,
+	 	.paletteMode = 0,
+	 	.priority = 2,
+	 	.baseTile = 0
+	 },
+	 { // BG
+	 	.bg = 2,
+	 	.charBaseIndex = 0,
+	 	.mapBaseIndex = 31,
+	 	.screenSize = 0,
+	 	.paletteMode = 0,
+	 	.priority = 3,
+	 	.baseTile = 0
+	 },
+	 { //Moves
+	 	.bg = 3,
+	 	.charBaseIndex = 0,
+	 	.mapBaseIndex = 28,
+	 	.screenSize = 0,
+	 	.paletteMode = 0,
+	 	.priority = 1,
+	 	.baseTile = 0
+	 }
+};
+
+static const struct WindowTemplate WindowTemplatePokemonInfo[] =
+{
+    { //PAGE TITLE
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 0,
+        .width = 13,
+        .height = 2,
+        .paletteNum = 7,
+        .baseBlock = 0x0258
+    },
+    { //INSTRUCTION
+        .bg = 0,
+        .tilemapLeft = 19,
+        .tilemapTop = 0,
+        .width = 11,
+        .height = 2,
+        .paletteNum = 7,
+        .baseBlock = 0x0272
+    },
+    { // NICKNAME & LV OR TYPES
+        .bg = 0,
+        .tilemapLeft = 21,
+        .tilemapTop = 2,
+        .width = 10,
+        .height = 4,
+        .paletteNum = 6,
+        .baseBlock = 0x0288
+    }
+};
+
+static const struct WindowTemplate sDataMonAndNatureWindowTemplate[] = 
+{
+    { //Data Pokemon
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 2,
+        .width = 21,
+        .height = 10,
+        .paletteNum = 6,
+        .baseBlock = 0
+    },
+    { // Nature and Found place
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 12,
+        .width = 28,
+        .height = 8,
+        .paletteNum = 6,
+        .baseBlock = 220
+    },
+    { //DUMMY_WIN_TEMPLATE
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 0,
+        .width = 0,
+        .height = 0,
+        .paletteNum = 0,
+        .baseBlock = 0
+    },
+    { //DUMMY_WIN_TEMPLATE
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 0,
+        .width = 0,
+        .height = 0,
+        .paletteNum = 0,
+        .baseBlock = 0
+    },
+};
+
+static const struct WindowTemplate sMonStatsAndAbilityWindowTemplate[] = 
+{
+    { // Pokemon Stats
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 2,
+        .width = 17,
+        .height = 13,
+        .paletteNum = 6,
+        .baseBlock = 1
+    },
+    { //Exp Point & Next Lv
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 0,
+        .width = 0,
+        .height = 0,
+        .paletteNum = 0,
+        .baseBlock = 0
+    },
+    { // Ability & Description
+        .bg = 0,
+        .tilemapLeft = 1,
+        .tilemapTop = 15,
+        .width = 29,
+        .height = 5,
+        .paletteNum = 6,
+        .baseBlock = 292
+    },
+    { // DUMMY_WIN_TEMPLATE
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 0,
+        .width = 0,
+        .height = 0,
+        .paletteNum = 0,
+        .baseBlock = 0
+    },
+};
+
+static const struct WindowTemplate sMovesInfoWindowTemplate[] = 
+{
+    { //Move Names
+        .bg = 0,
+        .tilemapLeft = 5,
+        .tilemapTop = 2,
+        .width = 10,
+        .height = 18,
+        .paletteNum = 6,
+        .baseBlock = 1
+    },
+    { //Move Data & Description
+        .bg = 0,
+        .tilemapLeft = 15,
+        .tilemapTop = 6,
+        .width = 15,
+        .height = 14,
+        .paletteNum = 6,
+        .baseBlock = 181
+    },
+    { //Move Icons
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 2,
+        .width = 5,
+        .height = 18,
+        .paletteNum = 6,
+        .baseBlock = 452
+    },
+    { //DUMMY_WIN_TEMPLATE
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 0,
+        .width = 0,
+        .height = 0,
+        .paletteNum = 0,
+        .baseBlock = 0
+    },
+};
+
+static const struct WindowTemplate sUnknown_8463F9C[] = 
+{
+    {
+        .bg = 255,
+        .tilemapLeft = 0,
+        .tilemapTop = 0,
+        .width = 0,
+        .height = 0,
+        .paletteNum = 0,
+        .baseBlock = 0x0000
+    },
+};
+
+static const s8 sPSSNatureStatTable[][5] =
+{
+    // Atk Def Spd Sp.Atk Sp.Def
+    {    0,  0,  0,     0,     0}, // Hardy
+    {   +1, -1,  0,     0,     0}, // Lonely
+    {   +1,  0, -1,     0,     0}, // Brave
+    {   +1,  0,  0,    -1,     0}, // Adamant
+    {   +1,  0,  0,     0,    -1}, // Naughty
+    {   -1, +1,  0,     0,     0}, // Bold
+    {    0,  0,  0,     0,     0}, // Docile
+    {    0, +1, -1,     0,     0}, // Relaxed
+    {    0, +1,  0,    -1,     0}, // Impish
+    {    0, +1,  0,     0,    -1}, // Lax
+    {   -1,  0, +1,     0,     0}, // Timid
+    {    0, -1, +1,     0,     0}, // Hasty
+    {    0,  0,  0,     0,     0}, // Serious
+    {    0,  0, +1,    -1,     0}, // Jolly
+    {    0,  0, +1,     0,    -1}, // Naive
+    {   -1,  0,  0,    +1,     0}, // Modest
+    {    0, -1,  0,    +1,     0}, // Mild
+    {    0,  0, -1,    +1,     0}, // Quiet
+    {    0,  0,  0,     0,     0}, // Bashful
+    {    0,  0,  0,    +1,    -1}, // Rash
+    {   -1,  0,  0,     0,    +1}, // Calm
+    {    0, -1,  0,     0,    +1}, // Gentle
+    {    0,  0, -1,     0,    +1}, // Sassy
+    {    0,  0,  0,    -1,    +1}, // Careful
+    {    0,  0,  0,     0,     0}, // Quirky
+};
+
+enum
+{
+	DARK,
+	WHITE_TITLE,
+	BLUE_SHADOW,
+	WHITE,
+	RED_SHADOW,
+	BLUE,
+	RED,
+	ORANGE,
+	RED_2,
+};
+
+enum
+{
+	tTimer,
+	Offset,
+};
+
+static const u8 sPSSTextColours[][3] =
+{
+    [DARK] = {0, 14, 13},		//Text Dark
+    [WHITE_TITLE] = {0, 1, 2}, 	//Text White (title) 
+    [BLUE_SHADOW] = {0, 15, 7}, //Red Shadow
+    [WHITE] = {0, 15, 14},		//Text White
+    [RED_SHADOW] = {0, 15, 1}, 	//Blue Shadow
+    [BLUE] = {0, 7, 6}, 		//Male Symbol
+    [RED] = {0, 1, 2}, 			//Female Symbol (red)
+    [ORANGE] = {0, 3, 14}, 		//Low PP
+    [RED_2] = {0, 1, 14}, 		//Whithout PP
+};
+
+static const u16 * const sHpBarPalettes[] =
+{
+    gPal0SummaryScreen,
+    gPal1SummaryScreen,
+    gPal2SummaryScreen,
+};
