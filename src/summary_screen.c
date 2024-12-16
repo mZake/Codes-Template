@@ -524,6 +524,496 @@ static const u16 * const sHpBarPalettes[] =
 
 // The functions below must be hooked probably
 
+static void PSS_DrawMoveIcon(void)
+{
+    u8 i;
+
+    FillWindowPixelBuffer(sMonSummaryScreen->window[5], 0);
+
+    if (gSaveBlock2Ptr->optionsLanguage == ENG)
+	{
+		for (i = 0; i < 4; i++)
+		{
+			if (sMonSummaryScreen->currentMove[i] == MOVE_NONE)
+				continue;
+
+			BlitMoveInfoIcon(sMonSummaryScreen->window[5], sMonSummaryScreen->move[i] + 1, 8, MACRO_8137270(i) - 2);
+		}
+
+		if (sMonSummaryScreen->mode == PSS_MODE_SELECT_MOVE)
+			BlitMoveInfoIcon(sMonSummaryScreen->window[5], sMonSummaryScreen->move[4] + 1, 8, MACRO_8137270(4) - 2);
+	}
+    if (gSaveBlock2Ptr->optionsLanguage == SPA)
+	{
+		for (i = 0; i < 4; i++)
+		{
+			if (sMonSummaryScreen->currentMove[i] == MOVE_NONE)
+				continue;
+
+			BlitMoveInfoIcon(sMonSummaryScreen->window[5], sMonSummaryScreen->move[i] + 24, 8, MACRO_8137270(i) - 2);
+		}
+
+		if (sMonSummaryScreen->mode == PSS_MODE_SELECT_MOVE)
+			BlitMoveInfoIcon(sMonSummaryScreen->window[5], sMonSummaryScreen->move[4] + 24, 8, MACRO_8137270(4) - 2);
+	}
+}
+
+static void sub_8137EE8(void)
+{
+    RunTasks();
+    AnimateSprites();
+    BuildOamBuffer();
+    UpdatePaletteFade();
+	PSS_ScrollPSSBackground();
+}
+
+static void sub_8137FF4(void)
+{
+    if (sMonSummaryScreen->unk324C < 240)
+    {
+        sMonSummaryScreen->unk324C += 240;
+        if (sMonSummaryScreen->unk324C > 240)
+            sMonSummaryScreen->unk324C = 240;
+    }
+}
+
+static void sub_813805C(void)
+{
+    if (sMonSummaryScreen->unk324C >= 240)
+    {
+        sMonSummaryScreen->unk324C -= 240;
+        if (sMonSummaryScreen->unk324C < 0)
+            sMonSummaryScreen->unk324C = 0;
+    }
+}
+
+static void sub_813817C(void)
+{
+    LoadOam();
+    ProcessSpriteCopyRequests();
+    TransferPlttBuffer();
+
+    if (sMonSummaryScreen->unk3244 == FALSE)
+        return;
+
+    sub_81380F0();
+}
+
+static void sub_8138280(u8 curPageIndex)
+{
+    u8 i;
+    for (i = 0; i < 3; i++)
+		sMonSummaryScreen->window[i] = AddWindow(&WindowTemplatePokemonInfo[i]);
+    for (i = 0; i < 4; i++)
+        switch (curPageIndex)
+        {
+        case PSS_PAGE_INFO:
+            sMonSummaryScreen->window[i + 3] = AddWindow(&sDataMonAndNatureWindowTemplate[i]);
+            break;
+        case PSS_PAGE_SKILLS:
+        default:
+            sMonSummaryScreen->window[i + 3] = AddWindow(&sMonStatsAndAbilityWindowTemplate[i]);
+            break;
+        case PSS_PAGE_MOVES:
+        case PSS_PAGE_MOVES_INFO:
+            sMonSummaryScreen->window[i + 3] = AddWindow(&sMovesInfoWindowTemplate[i]);
+            break;
+        }
+}
+
+static void sub_8138538(void)
+{
+    switch (sMonSummaryScreen->curPageIndex)
+    {
+    case PSS_PAGE_INFO:
+        if (!sMonSummaryScreen->isEgg)
+        {
+            LZ77UnCompVram(gMapSummaryScreenPokemonInfo, (void *)(VRAM + 0xF000));
+        }
+        else
+        {
+            LZ77UnCompVram(gMapSummaryScreenEgg, (void *)(VRAM + 0xF000));
+        }
+		PSS_SetInvisibleHpBar(1);
+		PSS_SetInvisibleExpBar(1);
+        break;
+    case PSS_PAGE_SKILLS:
+        LZ77UnCompVram(gMapSummaryScreenPokemonSkills, (void *)(VRAM + 0xF000));
+		PSS_SetInvisibleHpBar(0);
+		PSS_SetInvisibleExpBar(0);
+		HideBg(3);
+        break;
+    case PSS_PAGE_MOVES:
+        LZ77UnCompVram(gMapSummaryScreenKnownMoves, (void *)(VRAM + 0xF000));
+        LZ77UnCompVram(gMapSummaryScreenMoves, (void *)(VRAM + 0xE000));
+		PSS_SetInvisibleHpBar(1);
+		PSS_SetInvisibleExpBar(1);
+		ShowBg(3);
+        break;
+    case PSS_PAGE_MOVES_INFO:
+		LZ77UnCompVram(gMapSummaryScreenMovesInfo, (void *)(VRAM + 0xF000));
+        LZ77UnCompVram(gMapSummaryScreenMoves, (void *)(VRAM + 0xE000));
+		PSS_SetInvisibleHpBar(1);
+		PSS_SetInvisibleExpBar(1);
+		ShowBg(3);
+        break;
+    }
+}
+
+static void PSS_DrawMonMoveIcon(void)
+{
+    switch (sMonSummaryScreen->curPageIndex)
+    {
+    case PSS_PAGE_INFO:
+        if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		{
+			if (!sMonSummaryScreen->isEgg)
+			{
+				BlitMoveInfoIcon(sMonSummaryScreen->window[3], sMonSummaryScreen->typeIcons[0] + 1, 78, 33);
+
+				if (sMonSummaryScreen->typeIcons[0] != sMonSummaryScreen->typeIcons[1])
+                BlitMoveInfoIcon(sMonSummaryScreen->window[3], sMonSummaryScreen->typeIcons[1] + 1, 110, 33);
+			}
+		}
+        if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		{
+			if (!sMonSummaryScreen->isEgg)
+			{
+				BlitMoveInfoIcon(sMonSummaryScreen->window[3], sMonSummaryScreen->typeIcons[0] + 24, 78, 33);
+
+				if (sMonSummaryScreen->typeIcons[0] != sMonSummaryScreen->typeIcons[1])
+                BlitMoveInfoIcon(sMonSummaryScreen->window[3], sMonSummaryScreen->typeIcons[1] + 24, 110, 33);
+			}
+		}
+        break;
+    case PSS_PAGE_SKILLS:
+        break;
+    case PSS_PAGE_MOVES:
+        break;
+    case PSS_PAGE_MOVES_INFO:
+        break;
+    }
+}
+
+static void sub_8138CD8(u8 id)
+{
+    u8 i;
+
+    switch (sMonSummaryScreen->unk3288)
+    {
+    case 0:
+        if (MenuHelpers_CallLinkSomething() == TRUE || sub_800B270() == TRUE)
+            return;
+
+        if (JOY_NEW(DPAD_UP))
+        {
+            if (sUnknown_203B16D > 0)
+            {
+                sMonSummaryScreen->unk3288 = 2;
+                PlaySE(SE_SELECT);
+
+                for (i = sUnknown_203B16D; i > 0; i--)
+                    if (sMonSummaryScreen->currentMove[i - 1] != 0)
+                    {
+                        PlaySE(SE_SELECT);
+                        sUnknown_203B16D = i - 1;
+                        return;
+                    }
+            }
+            else
+            {
+                sUnknown_203B16D = 4;
+                sMonSummaryScreen->unk3288 = 2;
+                PlaySE(SE_SELECT);
+
+                if (sMonSummaryScreen->unk3268 == TRUE)
+                    for (i = sUnknown_203B16D; i > 0; i--)
+                        if (sMonSummaryScreen->currentMove[i - 1] != 0)
+                        {
+                            PlaySE(SE_SELECT);
+                            sUnknown_203B16D = i - 1;
+                            return;
+                        }
+            }
+        }
+        else if (JOY_NEW(DPAD_DOWN))
+        {
+            if (sUnknown_203B16D < 4)
+            {
+                u8 v0 = 4;
+
+                sMonSummaryScreen->unk3288 = 2;
+
+                if (sMonSummaryScreen->unk3268 == TRUE)
+                {
+                    if (sUnknown_203B16D == 5 - 2)
+                    {
+                        sUnknown_203B16D = 0;
+                        sMonSummaryScreen->unk3288 = 2;
+                        PlaySE(SE_SELECT);
+                        return;
+                    }
+                    v0--;
+                }
+
+                for (i = sUnknown_203B16D; i < v0; i++)
+                    if (sMonSummaryScreen->currentMove[i + 1] != 0)
+                    {
+                        PlaySE(SE_SELECT);
+                        sUnknown_203B16D = i + 1;
+                        return;
+                    }
+
+                if (!sMonSummaryScreen->unk3268)
+                {
+                    PlaySE(SE_SELECT);
+                    sUnknown_203B16D = i;
+                }
+                else
+                {
+                    PlaySE(SE_SELECT);
+                    sUnknown_203B16D = 0;
+                }
+
+                return;
+            }
+            else if (sUnknown_203B16D == 4)
+            {
+                sUnknown_203B16D = 0;
+                sMonSummaryScreen->unk3288 = 2;
+                PlaySE(SE_SELECT);
+                return;
+            }
+        }
+        else if (JOY_NEW(A_BUTTON))
+        {
+            PlaySE(SE_SELECT);
+            if (sUnknown_203B16D == 4)
+            {
+                sUnknown_203B16D = 0;
+                sUnknown_203B16E = 0;
+                sMonSummaryScreen->unk3268 = FALSE;
+                sub_813A0E8(1);
+                sMonSummaryScreen->unk3224 = 0;
+                PSS_RemoveAllWindows(sMonSummaryScreen->curPageIndex);
+                sMonSummaryScreen->curPageIndex--;
+                sMonSummaryScreen->unk3288 = 1;
+                return;
+            }
+
+            if (sMonSummaryScreen->unk3268 != TRUE)
+            {
+                if (sMonSummaryScreen->isEnemyParty == FALSE
+                    && gMain.inBattle == 0
+                    && gReceivedRemoteLinkPlayers == 0)
+                {
+                    sUnknown_203B16E = sUnknown_203B16D;
+                    sMonSummaryScreen->unk3268 = TRUE;
+                }
+                return;
+            }
+            else
+            {
+                sMonSummaryScreen->unk3268 = FALSE;
+
+                if (sUnknown_203B16D == sUnknown_203B16E)
+                    return;
+
+                if (sMonSummaryScreen->isBoxMon == 0)
+                    sub_81390B0();
+                else
+                    sub_81391EC();
+
+                sub_8139328(&sMonSummaryScreen->currentMon);
+                sub_81367B0();
+                sMonSummaryScreen->unk3288 = 2;
+                return;
+            }
+        }
+        else if (JOY_NEW(B_BUTTON))
+        {
+            if (sMonSummaryScreen->unk3268 == TRUE)
+            {
+                sUnknown_203B16E = sUnknown_203B16D;
+                sMonSummaryScreen->unk3268 = FALSE;
+                return;
+            }
+
+            if (sUnknown_203B16D == 4)
+            {
+                sUnknown_203B16D = 0;
+                sUnknown_203B16E = 0;
+            }
+
+            sub_813A0E8(1);
+            sMonSummaryScreen->unk3224 = 0;
+            PSS_RemoveAllWindows(sMonSummaryScreen->curPageIndex);
+            sMonSummaryScreen->curPageIndex--;
+            sMonSummaryScreen->unk3288 = 1;
+        }
+        break;
+    case 1:
+        gTasks[sMonSummaryScreen->task].func = sub_81351A0;
+        sMonSummaryScreen->unk3288 = 0;
+        break;
+    case 2:
+        PSS_AddTextToWin3();
+        PSS_AddTextToWin4();
+        PSS_AddTextToWin5();
+        sMonSummaryScreen->unk3288 = 3;
+        break;
+    case 3:
+        if (MenuHelpers_CallLinkSomething() == TRUE || sub_800B270() == TRUE)
+            return;
+
+        CopyWindowToVram(sMonSummaryScreen->window[3], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[4], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[5], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[6], 2);
+        CopyBgTilemapBufferToVram(0);
+        sMonSummaryScreen->unk3288 = 0;
+        break;
+    default:
+        break;
+    }
+}
+
+static void sub_81393D4(u8 taskId)
+{
+    u8 i;
+
+    switch (sMonSummaryScreen->unk3288)
+    {
+    case 0:
+        BeginNormalPaletteFade(0xffffffff, 0, 16, 0, 0);
+        sMonSummaryScreen->unk3288++;
+        break;
+    case 1:
+        if (!gPaletteFade.active)
+        {
+            PSS_PlayMonCry();
+            sMonSummaryScreen->unk3288++;
+        }
+        break;
+    case 2:
+        if (JOY_NEW(DPAD_UP))
+        {
+            if (sUnknown_203B16D > 0)
+            {
+                sMonSummaryScreen->unk3288 = 3;
+                PlaySE(SE_SELECT);
+                for (i = sUnknown_203B16D; i > 0; i--)
+                    if (sMonSummaryScreen->currentMove[i - 1] != 0)
+                    {
+                        PlaySE(SE_SELECT);
+                        sUnknown_203B16D = i - 1;
+                        return;
+                    }
+            }
+            else
+            {
+                sUnknown_203B16D = 4;
+                sMonSummaryScreen->unk3288 = 3;
+                PlaySE(SE_SELECT);
+                return;
+            }
+        }
+        else if (JOY_NEW(DPAD_DOWN))
+        {
+            if (sUnknown_203B16D < 4)
+            {
+                u8 v0 = 4;
+
+                sMonSummaryScreen->unk3288 = 3;
+
+                if (sMonSummaryScreen->unk3268 == TRUE)
+                    v0--;
+
+                for (i = sUnknown_203B16D; i < v0; i++)
+                    if (sMonSummaryScreen->currentMove[i + 1] != 0)
+                    {
+                        PlaySE(SE_SELECT);
+                        sUnknown_203B16D = i + 1;
+                        return;
+                    }
+
+                if (!sMonSummaryScreen->unk3268)
+                {
+                    PlaySE(SE_SELECT);
+                    sUnknown_203B16D = i;
+                }
+
+                return;
+            }
+            else if (sUnknown_203B16D == 4)
+            {
+                sUnknown_203B16D = 0;
+                sMonSummaryScreen->unk3288 = 3;
+                PlaySE(SE_SELECT);
+                return;
+            }
+        }
+        else if (JOY_NEW(A_BUTTON))
+        {
+            if (sub_8139388() == TRUE || sUnknown_203B16D == 4)
+            {
+                PlaySE(SE_SELECT);
+                sUnknown_203B16E = sUnknown_203B16D;
+                gSpecialVar_0x8005 = sUnknown_203B16E;
+                sMonSummaryScreen->unk3288 = 6;
+            }
+            else
+            {
+                PlaySE(SE_FAILURE);
+                sMonSummaryScreen->unk3288 = 5;
+            }
+        }
+        else if (JOY_NEW(B_BUTTON))
+        {
+            sUnknown_203B16E = 4;
+            gSpecialVar_0x8005 = (u16)sUnknown_203B16E;
+            sMonSummaryScreen->unk3288 = 6;
+        }
+        break;
+    case 3:
+        PSS_AddTextToWin3();
+        PSS_AddTextToWin4();
+        PSS_AddTextToWin5();
+        sMonSummaryScreen->unk3288 = 4;
+        break;
+    case 4:
+        if (MenuHelpers_CallLinkSomething() == TRUE || sub_800B270() == TRUE)
+            return;
+
+        CopyWindowToVram(sMonSummaryScreen->window[3], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[4], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[5], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[6], 2);
+        CopyBgTilemapBufferToVram(0);
+        sMonSummaryScreen->unk3288 = 2;
+        break;
+    case 5:
+        FillWindowPixelBuffer(sMonSummaryScreen->window[4], 0);
+        AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2,
+                                     7, 42,
+                                     0, 0,
+                                     sPSSTextColours[DARK], TEXT_SPEED_FF,
+                                     gText_8419CB9);
+        CopyWindowToVram(sMonSummaryScreen->window[4], 2);
+        CopyBgTilemapBufferToVram(0);
+        sMonSummaryScreen->unk3288 = 2;
+        break;
+    case 6:
+        BeginNormalPaletteFade(0xffffffff, 0, 0, 16, 0);
+        sMonSummaryScreen->unk3288++;
+        break;
+    default:
+        if (!gPaletteFade.active)
+            sub_8137E64(taskId);
+        break;
+    }
+}
+
 static void PSS_LoadMonSprite(void)
 {
     u16 spriteId;
@@ -774,7 +1264,7 @@ static void PSS_LoadHpBar(u16 tileTag, u16 palTag)
     FREE_AND_SET_NULL_IF_SET(gfxBufferPtr);
 }
 
-// The change in this one is minimal may it don t need to be hooked
+// The change in this one is minimal, may it doesn't need to be hooked
 static void PSS_LoadExpBar(u16 tileTag, u16 palTag)
 {
     u8 i;
