@@ -524,6 +524,780 @@ static const u16 * const sHpBarPalettes[] =
 
 // The functions below must be hooked probably
 
+static void PSS_GetDataPokemon(void)
+{
+    u8 tempStr[20];
+    u16 dexNum;
+    u16 gender;
+    u16 heldItem;
+    u32 otId;
+
+    dexNum = SpeciesToPokedexNum(GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_SPECIES));
+    if (dexNum == 0xffff)
+        StringCopy(sMonSummaryScreen->summary.dexNum, gText_8416202);
+    else
+        ConvertIntToDecimalStringN(sMonSummaryScreen->summary.dexNum, dexNum, STR_CONV_MODE_LEADING_ZEROS, 3);
+
+    sUnknown_203B144->unk00 = 0;
+
+    if (!sMonSummaryScreen->isEgg)
+    {
+        dexNum = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_SPECIES);
+        GetSpeciesName(sMonSummaryScreen->summary.specieName, dexNum);
+    }
+    else
+    {
+        StringCopy(sMonSummaryScreen->summary.specieName, gText_EggNickname);
+        if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			StringCopy(sMonSummaryScreen->summary.specieName, gText_EggNicknameSpa);
+		return;
+    }
+
+    sMonSummaryScreen->typeIcons[0] = gBaseStats[dexNum].type1;
+    sMonSummaryScreen->typeIcons[1] = gBaseStats[dexNum].type2;
+
+    GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_NICKNAME, tempStr);
+    StringCopyN_Multibyte(sMonSummaryScreen->summary.nickname, tempStr, POKEMON_NAME_LENGTH);
+    StringGetEnd10(sMonSummaryScreen->summary.nickname);
+
+    gender = GetMonGender(&sMonSummaryScreen->currentMon);
+    dexNum = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_SPECIES2);
+
+    if (gender == MON_FEMALE)
+        StringCopy(sMonSummaryScreen->summary.genderSymbol, gText_FemaleSymbol);
+    else if (gender == MON_MALE)
+        StringCopy(sMonSummaryScreen->summary.genderSymbol, gText_MaleSymbol);
+    else
+        StringCopy(sMonSummaryScreen->summary.genderSymbol, gText_StringDummy);
+
+    if (dexNum == SPECIES_NIDORAN_M || dexNum == SPECIES_NIDORAN_F)
+        if (StringCompare(sMonSummaryScreen->summary.nickname, gSpeciesNames[dexNum]) == 0)
+            StringCopy(sMonSummaryScreen->summary.genderSymbol, gText_StringDummy);
+
+    GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_OT_NAME, tempStr);
+    StringCopyN_Multibyte(sMonSummaryScreen->summary.ot_name, tempStr, OT_NAME_LENGTH);
+
+    ConvertInternationalString(sMonSummaryScreen->summary.ot_name, GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_LANGUAGE));
+
+    otId = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_OT_ID) & 0xffff;
+    ConvertIntToDecimalStringN(sMonSummaryScreen->summary.ot_id, otId, STR_CONV_MODE_LEADING_ZEROS, 5);
+
+    ConvertIntToDecimalStringN(tempStr, GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_LEVEL), STR_CONV_MODE_LEFT_ALIGN, 3);
+    if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		StringCopy(sMonSummaryScreen->summary.level, gText_Lv);
+    if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		StringCopy(sMonSummaryScreen->summary.level, gText_LvSpa);
+    StringAppendN(sMonSummaryScreen->summary.level, tempStr, 4);
+
+    heldItem = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_HELD_ITEM);
+
+    if (heldItem == ITEM_NONE)
+	{
+        if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			StringCopy(sMonSummaryScreen->summary.heldItem, gText_84161EF);
+        if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			StringCopy(sMonSummaryScreen->summary.heldItem, gText_84161EFSpa);
+	}
+    else
+        CopyItemName(heldItem, sMonSummaryScreen->summary.heldItem);
+}
+
+static void PSS_InitDisplay(void)
+{
+    DmaClearLarge16(3, (void *)VRAM, VRAM_SIZE, 0x1000);
+    DmaClear32(3, (void *)OAM, OAM_SIZE);
+    DmaClear16(3, (void *)PLTT, PLTT_SIZE);
+
+    SetGpuReg(REG_OFFSET_DISPCNT, 0);
+
+    ResetBgsAndClearDma3BusyFlags(0);
+    InitBgsFromTemplates(0, SummayScreenBgTemplate, NELEMS(SummayScreenBgTemplate));
+
+    ChangeBgX(0, 0, 0);
+    ChangeBgY(0, 0, 0);
+    ChangeBgX(1, 0, 0);
+    ChangeBgY(1, 0, 0);
+    ChangeBgX(2, 0, 0);
+    ChangeBgY(2, 0, 0);
+    ChangeBgX(3, 0, 0);
+    ChangeBgY(3, 0, 0);
+
+    DeactivateAllTextPrinters();
+//Transparencia
+	SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_EFFECT_BLEND | BLDCNT_TGT1_BG1 | BLDCNT_TGT2_BG2);
+	SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(13, 16));
+    SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_OBJ_1D_MAP | DISPCNT_OBJ_ON);
+
+    ShowBg(0);
+    ShowBg(1);
+    ShowBg(2);
+    ShowBg(3);
+}
+
+static void PSS_AddTextToWin0(const u8 * str)
+{
+    FillWindowPixelBuffer(sMonSummaryScreen->window[0], 0);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[0], 2, 4, 1, sPSSTextColours[WHITE_TITLE], 0, str);
+    PutWindowTilemap(sMonSummaryScreen->window[0]);
+}
+
+static void PSS_AddTextToWin1(const u8 * str)
+{
+    u8 v0;
+    s32 width;
+    u8 r1;
+
+    FillWindowPixelBuffer(sMonSummaryScreen->window[1], 0);
+    width = GetStringWidth(0, str, 0);
+    r1 = sMonSummaryScreen->window[1];
+    AddTextPrinterParameterized3(r1, 0, 0x54 - width, 0, sPSSTextColours[WHITE_TITLE], 0, str);
+    PutWindowTilemap(sMonSummaryScreen->window[1]);
+}
+
+static void PSS_AddTextToWin2(const u8 * msg)
+{
+    FillWindowPixelBuffer(sMonSummaryScreen->window[2], 0);
+
+    if (!sMonSummaryScreen->isEgg)
+    {
+        if (sMonSummaryScreen->curPageIndex != PSS_PAGE_MOVES_INFO)
+		{
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[2], 2, 0, 14, sPSSTextColours[DARK], 0xff, sMonSummaryScreen->summary.level);
+		}
+		else
+		{
+			if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			{
+				BlitMoveInfoIcon(sMonSummaryScreen->window[2], sMonSummaryScreen->typeIcons[0] + 1, 6, 16);
+				if (sMonSummaryScreen->typeIcons[0] != sMonSummaryScreen->typeIcons[1])
+					BlitMoveInfoIcon(sMonSummaryScreen->window[2], sMonSummaryScreen->typeIcons[1] + 1, 38, 16);
+			}
+			if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			{
+				BlitMoveInfoIcon(sMonSummaryScreen->window[2], sMonSummaryScreen->typeIcons[0] + 24, 6, 16);
+				if (sMonSummaryScreen->typeIcons[0] != sMonSummaryScreen->typeIcons[1])
+					BlitMoveInfoIcon(sMonSummaryScreen->window[2], sMonSummaryScreen->typeIcons[1] + 24, 38, 16);
+			}
+		}
+        AddTextPrinterParameterized3(sMonSummaryScreen->window[2], 2, 0, 2, sPSSTextColours[DARK], 0xff, sMonSummaryScreen->summary.nickname);
+			
+		if (GetMonGender(&sMonSummaryScreen->currentMon) == MON_FEMALE)
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[2], 2, 62, 2, sPSSTextColours[RED], 0, sMonSummaryScreen->summary.genderSymbol);
+		else
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[2], 2, 62, 2, sPSSTextColours[BLUE], 0, sMonSummaryScreen->summary.genderSymbol);
+	}
+
+    PutWindowTilemap(sMonSummaryScreen->window[2]);
+}
+
+static void PSS_ShowInfoPokemon(void)
+{
+    
+
+    if (!sMonSummaryScreen->isEgg)
+    {
+        AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 80, 20, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.specieName);
+		
+		if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		{
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 8 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_DexNumber);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 20 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_Name);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 32 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_Type);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 44 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_OT);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 56 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_IDNumber);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 68 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_Item);
+		}
+        if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		{
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 8 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_DexNumberSpa);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 20 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_NameSpa);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 32 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_TypeSpa);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 44 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_OTSpa);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 56 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_IDNumberSpa);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 68 - 1, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_ItemSpa);
+		}
+		
+		if ((HIHALF(GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_OT_ID)) ^ LOHALF(GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_OT_ID)) ^ HIHALF(GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_PERSONALITY)) ^ LOHALF(GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_PERSONALITY))) < 8)
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 80 + sUnknown_203B144->unk00, 8, sPSSTextColours[RED], TEXT_SPEED_FF, sMonSummaryScreen->summary.dexNum);
+		else	
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 80 + sUnknown_203B144->unk00, 8, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.dexNum);
+		if ((gSaveBlock2Ptr->playerTrainerId[0] | (gSaveBlock2Ptr->playerTrainerId[1] << 8) | (gSaveBlock2Ptr->playerTrainerId[2] << 16) | (gSaveBlock2Ptr->playerTrainerId[3] << 24)) == GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_OT_ID))
+		{
+			if (gSaveBlock2Ptr->playerGender == FEMALE)
+				AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 80, 44, sPSSTextColours[RED], TEXT_SPEED_FF, sMonSummaryScreen->summary.ot_name);
+			if (gSaveBlock2Ptr->playerGender == MALE)
+				AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 80, 44, sPSSTextColours[BLUE], TEXT_SPEED_FF, sMonSummaryScreen->summary.ot_name);
+		}
+		else
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 80, 44, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.ot_name);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 80, 56, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.ot_id);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 80, 68, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.heldItem);
+    }
+    else
+    {
+        u8 eggCycles;
+        u8 hatchMsgIndex;
+
+        eggCycles = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_FRIENDSHIP);
+
+        if (eggCycles <= 5)
+            hatchMsgIndex = 3;
+        else if (eggCycles <= 10)
+            hatchMsgIndex = 2;
+        else if (eggCycles <= 40)
+            hatchMsgIndex = 1;
+        else
+            hatchMsgIndex = 0;
+
+        if (sMonSummaryScreen->isBadEgg)
+            hatchMsgIndex = 0;
+
+        if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		{
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 7, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_NameSpa);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 31, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_Status);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[3], 2, 80, 32, 0, -2, sPSSTextColours[DARK], TEXT_SPEED_FF, sUnknown_8463EC4[hatchMsgIndex]);
+        }
+		if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		{
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 7, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_NameSpa);
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 31, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_StatusSpa);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[3], 2, 80, 32, 0, -2, sPSSTextColours[DARK], TEXT_SPEED_FF, sUnknown_8463EC4[hatchMsgIndex + 4]);
+		}
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 80, 8, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.specieName);
+    }
+}
+
+static void PSS_ShowMonStats(void)
+{
+    u8 nature = GetNature(&sMonSummaryScreen->currentMon);
+	
+	if (gSaveBlock2Ptr->optionsLanguage == ENG)
+	{
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 44, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_HP);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 79, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_ExpPoints);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 91, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_ToNextLv);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 19, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][0]], TEXT_SPEED_FF, gText_PSS_Attack);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 31, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][1]], TEXT_SPEED_FF, gText_PSS_Defense);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 43, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][3]], TEXT_SPEED_FF, gText_PSS_SpAtk);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 55, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][4]], TEXT_SPEED_FF, gText_PSS_SpDef);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 67, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][2]], TEXT_SPEED_FF, gText_PSS_Speed);
+	}
+    if (gSaveBlock2Ptr->optionsLanguage == SPA)
+	{
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 44, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_HPSpa);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 79, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_ExpPointsSpa);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 91, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_ToNextLvSpa);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 19, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][0]], TEXT_SPEED_FF, gText_PSS_AttackSpa);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 31, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][1]], TEXT_SPEED_FF, gText_PSS_DefenseSpa);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 43, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][3]], TEXT_SPEED_FF, gText_PSS_SpAtkSpa);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 55, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][4]], TEXT_SPEED_FF, gText_PSS_SpDefSpa);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 10, 67, sPSSTextColours[WHITE + sPSSNatureStatTable[nature][2]], TEXT_SPEED_FF, gText_PSS_SpeedSpa);
+	}
+	
+	AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 68 + sUnknown_203B144->unk02, 0, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk3090);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 90 + sUnknown_203B144->tileTag, 20, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk309C[PSS_STAT_ATK]);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 90 + sUnknown_203B144->palTag, 32, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk309C[PSS_STAT_DEF]);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 90 + sUnknown_203B144->unk08, 44, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk309C[PSS_STAT_SPA]);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 90 + sUnknown_203B144->unk0A, 56, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk309C[PSS_STAT_SPD]);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 90 + sUnknown_203B144->unk0C, 68, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk309C[PSS_STAT_SPE]);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 55 + sUnknown_203B144->unk0E, 80, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk31A4);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 55 + sUnknown_203B144->unk10, 92, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk31B0);
+}
+
+static void PSS_PrintMoveNamesOrCancel(void)
+{
+    u8 i;
+
+    for (i = 0; i < 4; i++)
+        PSS_PrintMoveNamesAndPP(i);
+
+    if (sMonSummaryScreen->curPageIndex == PSS_PAGE_MOVES_INFO)
+    {
+        if (sMonSummaryScreen->mode == PSS_MODE_SELECT_MOVE)
+            PSS_PrintMoveNamesAndPP(4);
+        else
+		{
+            if (gSaveBlock2Ptr->optionsLanguage == ENG)
+				AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 3, MACRO_8137270(4), sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_FameChecker_Cancel);
+            if (gSaveBlock2Ptr->optionsLanguage == SPA)
+				AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 3, MACRO_8137270(4), sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_FameChecker_CancelSpa);
+		}
+    }
+}
+
+static void PSS_PrintMoveNamesAndPP(u8 i)
+{
+    u8 color = WHITE;
+    u8 curPP = PSS_GetMovePP(&sMonSummaryScreen->currentMon, i);
+    u16 move = sMonSummaryScreen->currentMove[i];
+    u8 ppBonuses = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_PP_BONUSES);
+    u8 maxPP = CalculatePPWithBonus(move, ppBonuses, i);
+
+    if (i == 4)
+        curPP = maxPP;
+	//Add Move Names
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 3, MACRO_8137270(i) - 2, sPSSTextColours[WHITE], TEXT_SPEED_FF, sMonSummaryScreen->summary.moveName[i]);
+
+    if (sMonSummaryScreen->currentMove[i] == 0 || (curPP == maxPP))
+        color = WHITE;
+    else if (curPP == 0)
+        color = RED_2;
+    else if (maxPP == 3)
+    {
+        if (curPP == 2)
+            color = ORANGE;
+        else if (curPP == 1)
+            color = ORANGE;
+    }
+    else if (maxPP == 2)
+    {
+        if (curPP == 1)
+            color = ORANGE;
+    }
+    else
+    {
+        if (curPP <= (maxPP / 4))
+            color = ORANGE;
+        else if (curPP <= (maxPP / 2))
+            color = ORANGE;
+    }
+	//Add PP text
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 20, MACRO_81372E4(i), sPSSTextColours[color], TEXT_SPEED_FF, gText_8416238);
+	// Add PP counter
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 40 + sUnknown_203B144->unk12[i], MACRO_81372E4(i), sPSSTextColours[color], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk30B8[i]);
+
+    if (sMonSummaryScreen->currentMove[i] != MOVE_NONE)
+    {
+		// Add Slash
+        AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 52, MACRO_81372E4(i), sPSSTextColours[color], TEXT_SPEED_FF, gText_Slash);
+        // Add PP Max
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[3], 2, 58 + sUnknown_203B144->unk1C[i], MACRO_81372E4(i), sPSSTextColours[color], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk30F0[i]);
+    }
+}
+
+static void sub_8137578(void)
+{
+    u8 nature;
+    u8 level;
+    u8 metLocation;
+    u8 levelStr[5];
+    u8 mapNameStr[32];
+    u8 natureMetOrHatchedAtLevelStr[152];
+
+    DynamicPlaceholderTextUtil_Reset();
+    nature = GetNature(&sMonSummaryScreen->currentMon);
+	if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		DynamicPlaceholderTextUtil_SetPlaceholderPtr(0, gNatureNamePointers[nature]);
+	else if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		DynamicPlaceholderTextUtil_SetPlaceholderPtr(0, gNatureNameSpaPointers[nature]);
+
+    level = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MET_LEVEL);
+
+    if (level == 0)
+        level = 1;
+
+    ConvertIntToDecimalStringN(levelStr, level, STR_CONV_MODE_LEFT_ALIGN, 3);
+    DynamicPlaceholderTextUtil_SetPlaceholderPtr(1, levelStr);
+
+    metLocation = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MET_LOCATION);
+
+    if (sub_813B838(metLocation) == TRUE)
+        GetMapNameGeneric_(mapNameStr, metLocation);
+    else
+    {
+        if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		{
+			if (sMonSummaryScreen->isEnemyParty == TRUE || sub_8138B4C() == TRUE)
+				StringCopy(mapNameStr, gText_8419C13);
+			else
+				StringCopy(mapNameStr, gText_8419C0B);
+		}
+        if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		{
+			if (sMonSummaryScreen->isEnemyParty == TRUE || sub_8138B4C() == TRUE)
+				StringCopy(mapNameStr, gText_8419C13Spa);
+			else
+				StringCopy(mapNameStr, gText_8419C0BSpa);
+		}
+    }
+
+    DynamicPlaceholderTextUtil_SetPlaceholderPtr(2, mapNameStr);
+
+    if (GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MET_LEVEL) == 0)
+    {
+        if (GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_EVENT_LEGAL) == 1)
+        {
+            if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841996D);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841992F);
+			}
+            if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841996DSpa);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841992FSpa);
+			}
+        }
+        else
+        {
+            if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84198D5);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84198B4);
+			}
+            if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84198D5Spa);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84198B4Spa);
+			}
+        }
+    }
+    else
+    {
+        if (metLocation == METLOC_FATEFUL_ENCOUNTER)
+        {
+            if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197ED);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197B8);
+			}
+            if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197EDSpa);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197B8Spa);
+			}
+        }
+        else
+        {
+            if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419841);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419822);
+			}
+            if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419841Spa);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419822Spa);
+			}
+        }
+    }
+
+	if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 6, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_TrainerMemo);
+	if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 6, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_TrainerMemoSpa);
+    AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 16, 12, 0, -2, sPSSTextColours[DARK], TEXT_SPEED_FF, natureMetOrHatchedAtLevelStr);
+}
+
+static void PSS_ShowTrainerMemo(void)
+{
+    u8 nature;
+    u8 level;
+    u8 metLocation;
+    u8 levelStr[5];
+    u8 mapNameStr[32];
+    u8 natureMetOrHatchedAtLevelStr[152];
+
+    DynamicPlaceholderTextUtil_Reset();
+    nature = GetNature(&sMonSummaryScreen->currentMon);
+	if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		DynamicPlaceholderTextUtil_SetPlaceholderPtr(0, gNatureNamePointers[nature]);
+	else if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		DynamicPlaceholderTextUtil_SetPlaceholderPtr(0, gNatureNameSpaPointers[nature]);
+
+    level = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MET_LEVEL);
+
+    if (level == 0)
+        level = 1;
+
+    ConvertIntToDecimalStringN(levelStr, level, STR_CONV_MODE_LEFT_ALIGN, 3);
+    DynamicPlaceholderTextUtil_SetPlaceholderPtr(1, levelStr);
+
+    metLocation = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MET_LOCATION);
+
+    if (!sub_813B838(metLocation) || !PSS_IsMonFromGenIII())
+    {
+        if (sub_8138B4C() == TRUE)
+        {
+            sub_8137578();
+            return;
+        }
+
+        if (metLocation == METLOC_FATEFUL_ENCOUNTER)
+        {
+            if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197ED);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197B8);
+			}
+            if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197EDSpa);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197B8Spa);
+			}
+        }
+        else
+        {
+            if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841979D);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419782);
+			}
+            if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			{
+				if (PSS_IsNatureBoldOrGentle(nature))
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841979DSpa);
+				else
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419782Spa);
+			}
+        }
+		if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 6, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_TrainerMemo);
+		if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 6, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_TrainerMemoSpa);
+
+        AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 16, 12, 0, -2, sPSSTextColours[DARK], TEXT_SPEED_FF, natureMetOrHatchedAtLevelStr);
+        return;
+    }
+
+    if (sub_813B838(metLocation) == TRUE)
+        GetMapNameGeneric_(mapNameStr, metLocation);
+    else
+	{
+        if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			StringCopy(mapNameStr, gText_8419C0B);
+        if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			StringCopy(mapNameStr, gText_8419C0BSpa);
+	}		
+
+    DynamicPlaceholderTextUtil_SetPlaceholderPtr(2, mapNameStr);
+
+    if (GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MET_LEVEL) == 0)
+    {
+        if (GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_EVENT_LEGAL) == 1)
+        {
+            if (PSS_IsNatureBoldOrGentle(nature))
+			{                
+				if (gSaveBlock2Ptr->optionsLanguage == ENG)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84199F4);
+				if (gSaveBlock2Ptr->optionsLanguage == SPA)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84199F4Spa);
+			}
+            else
+			{
+                if (gSaveBlock2Ptr->optionsLanguage == ENG)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84199AB);
+                if (gSaveBlock2Ptr->optionsLanguage == SPA)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84199ABSpa);
+			}
+        }
+        else
+        {
+            if (PSS_IsNatureBoldOrGentle(nature))
+			{
+                if (gSaveBlock2Ptr->optionsLanguage == ENG)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841988A);
+                if (gSaveBlock2Ptr->optionsLanguage == SPA)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841988ASpa);
+			}
+            else
+			{
+                if (gSaveBlock2Ptr->optionsLanguage == ENG)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419860);
+                if (gSaveBlock2Ptr->optionsLanguage == SPA)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419860Spa);
+			}
+        }
+    }
+    else
+    {
+        if (metLocation == METLOC_FATEFUL_ENCOUNTER)
+        {
+            if (PSS_IsNatureBoldOrGentle(nature))
+			{
+                if (gSaveBlock2Ptr->optionsLanguage == ENG)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197ED);
+                if (gSaveBlock2Ptr->optionsLanguage == SPA)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197EDSpa);
+			}
+            else
+			{
+                if (gSaveBlock2Ptr->optionsLanguage == ENG)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197B8);
+                if (gSaveBlock2Ptr->optionsLanguage == SPA)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_84197B8Spa);
+			}
+        }
+        else
+        {
+            if (PSS_IsNatureBoldOrGentle(nature))
+			{
+                if (gSaveBlock2Ptr->optionsLanguage == ENG)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841988A);
+                if (gSaveBlock2Ptr->optionsLanguage == SPA)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_841988ASpa);
+			}
+            else
+			{
+                if (gSaveBlock2Ptr->optionsLanguage == ENG)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419860);
+                if (gSaveBlock2Ptr->optionsLanguage == SPA)
+					DynamicPlaceholderTextUtil_ExpandPlaceholders(natureMetOrHatchedAtLevelStr, gText_8419860Spa);
+			}
+        }
+    }
+	if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 6, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_TrainerMemo);
+	if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 6, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_TrainerMemoSpa);
+
+    AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 16, 12, 0, -2, sPSSTextColours[DARK], TEXT_SPEED_FF, natureMetOrHatchedAtLevelStr);
+}
+
+static void PSS_ShowMonInfo(void)
+{
+    u8 metLocation;
+    u8 version;
+    u8 chosenStrIndex = 0;
+
+    metLocation = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MET_LOCATION);
+
+    if (sMonSummaryScreen->monList.mons != gEnemyParty)
+    {
+        if (metLocation == METLOC_FATEFUL_ENCOUNTER || GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_EVENT_LEGAL) == 1)
+            chosenStrIndex = 4;
+        else
+        {
+            version = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MET_GAME);
+
+            if (version != VERSION_LEAF_GREEN && version != VERSION_FIRE_RED)
+                chosenStrIndex = 1;
+            else if (metLocation == METLOC_SPECIAL_EGG)
+                chosenStrIndex = 2;
+
+            if (chosenStrIndex == 0 || chosenStrIndex == 2)
+                if (sub_813847C(&sMonSummaryScreen->currentMon) == FALSE)
+                    chosenStrIndex++;
+        }
+    }
+    else
+    {
+        if (metLocation == METLOC_FATEFUL_ENCOUNTER || GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_EVENT_LEGAL) == 1)
+            chosenStrIndex = 4;
+        else
+        {
+            version = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_MET_GAME);
+
+            if (version != VERSION_LEAF_GREEN && version != VERSION_FIRE_RED)
+            {
+                if (metLocation == METLOC_SPECIAL_EGG)
+                    chosenStrIndex = 5;
+            }
+            else if (metLocation == METLOC_SPECIAL_EGG)
+                chosenStrIndex = 2;
+
+            if (sub_813847C(&sMonSummaryScreen->currentMon) == FALSE)
+                chosenStrIndex++;
+        }
+    }
+
+    if (sMonSummaryScreen->isBadEgg)
+        chosenStrIndex = 0;
+
+	if (gSaveBlock2Ptr->optionsLanguage == ENG)
+	{
+		AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 16, 12, 0, -2, sPSSTextColours[DARK], TEXT_SPEED_FF, sUnknown_8463ED4[chosenStrIndex]);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 6, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_TrainerMemo);
+    }
+	if (gSaveBlock2Ptr->optionsLanguage == SPA)
+	{
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 6, 0, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_TrainerMemoSpa);
+		AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 16, 12, 0, -2, sPSSTextColours[DARK], TEXT_SPEED_FF, sUnknown_8463ED4[chosenStrIndex + 7]);
+	}
+}
+
+static void PSS_PrintExpPointAndNextLvTexts(void)
+{
+    if (gSaveBlock2Ptr->optionsLanguage == ENG)
+	{
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 26,  7, sPSSTextColours[DARK], TEXT_SPEED_FF, gText_8419C4D);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 26, 20, sPSSTextColours[DARK], TEXT_SPEED_FF, gText_8419C59);
+	}
+    if (gSaveBlock2Ptr->optionsLanguage == SPA)
+	{
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 26,  7, sPSSTextColours[DARK], TEXT_SPEED_FF, gText_8419C4DSpa);
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 26, 20, sPSSTextColours[DARK], TEXT_SPEED_FF, gText_8419C59Spa);
+	}
+}
+
+static void PSS_ShowAttackInfo(void)
+{
+    if (sUnknown_203B16D < 5)
+    {
+        if (sMonSummaryScreen->mode != PSS_MODE_SELECT_MOVE && sUnknown_203B16D == 4)
+            return;
+		//Add Category Icon
+	//	BlitMoveInfoIcon(sMonSummaryScreen->window[4], gBattleMoves[sMonSummaryScreen->currentMove[sUnknown_203B16D]].category + 47, 85, 0);
+		//Add Power
+        AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 91, 18, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.power[sUnknown_203B16D]);
+		//Add Accuracy
+        AddTextPrinterParameterized3(sMonSummaryScreen->window[4], 2, 91, 33, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.unk3188[sUnknown_203B16D]);
+		//Add Move Description
+        if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		{
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 14,  2, 0, -2, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_Category);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 14, 17, 0, -2, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_Power);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 14, 32, 0, -2, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_Accuracy);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 10, 48, 0, -2, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_Effect);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2,  7, 63, 0, -2, sPSSTextColours[DARK], TEXT_SPEED_FF, gMoveDescriptionPointers[sMonSummaryScreen->currentMove[sUnknown_203B16D] - 1]);
+        }
+		if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		{
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 14,  2, 0, -2, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_CategorySpa);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 14, 17, 0, -2, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_PowerSpa);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 14, 32, 0, -2, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_AccuracySpa);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2, 10, 48, 0, -2, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_EffectSpa);
+			AddTextPrinterParameterized4(sMonSummaryScreen->window[4], 2,  7, 63, 0, -2, sPSSTextColours[DARK], TEXT_SPEED_FF, gMoveDescriptionPointers[sMonSummaryScreen->currentMove[sUnknown_203B16D] + MOVES_COUNT - 2]);
+		}
+        PutWindowTilemap(sMonSummaryScreen->window[4]);
+    }
+}
+
+static void PSS_PrintAbilityNameAndDescription(void)
+{
+    FillWindowPixelBuffer(sMonSummaryScreen->window[5], 0);
+	if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[5], 2, 11,  4, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_Ability);
+	if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		AddTextPrinterParameterized3(sMonSummaryScreen->window[5], 2, 5,  4, sPSSTextColours[WHITE], TEXT_SPEED_FF, gText_PSS_AbilitySpa);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[5], 2, 60,  4, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.abilityName);
+    AddTextPrinterParameterized3(sMonSummaryScreen->window[5], 2, 20, 23, sPSSTextColours[DARK], TEXT_SPEED_FF, sMonSummaryScreen->summary.abilityDescription);
+
+}
+
 static void PSS_DrawMoveIcon(void)
 {
     u8 i;
