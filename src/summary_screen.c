@@ -524,6 +524,507 @@ static const u16 * const sHpBarPalettes[] =
 
 // The functions below must be hooked probably
 
+static void sub_8134E84(u8 taskId)
+{
+    switch (sMonSummaryScreen->unk3284)
+    {
+    case 0:
+        sMonSummaryScreen->lockMovesFlag = TRUE;
+        sMonSummaryScreen->unk301C = TRUE;
+        sub_8138280(sMonSummaryScreen->curPageIndex);
+        break;
+    case 1:
+        if (sMonSummaryScreen->curPageIndex != PSS_PAGE_MOVES_INFO)
+        {
+            if (!(sMonSummaryScreen->curPageIndex == PSS_PAGE_MOVES && sMonSummaryScreen->unk3224 == 0))
+            {
+				
+            }
+        }
+        break;
+    case 2:
+        sub_8135638();
+        sub_8135B90();
+        sub_8138538();
+        sub_8135AA4();
+        break;
+    case 3:
+        if (gSaveBlock2Ptr->optionsLanguage == ENG)
+			PSS_AddTextToWin0(gText_8419C39);
+        if (gSaveBlock2Ptr->optionsLanguage == SPA)
+			PSS_AddTextToWin0(gText_8419C39Spa);
+        if (!(gMain.inBattle || gReceivedRemoteLinkPlayers))
+		{
+            if (gSaveBlock2Ptr->optionsLanguage == ENG)
+				PSS_AddTextToWin1(gText_8419C92);
+            if (gSaveBlock2Ptr->optionsLanguage == SPA)
+				PSS_AddTextToWin1(gText_8419C92Spa);
+		}
+        else
+		{
+            if (gSaveBlock2Ptr->optionsLanguage == ENG)
+				PSS_AddTextToWin1(gText_8419CA2);
+            if (gSaveBlock2Ptr->optionsLanguage == SPA)
+				PSS_AddTextToWin1(gText_8419CA2Spa);
+		}
+        break;
+    case 4:
+        CopyWindowToVram(sMonSummaryScreen->window[0], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[1], 2);
+        break;
+    case 5:
+        break;
+    case 6:
+        PSS_AddTextToWin3();
+        PSS_AddTextToWin5();
+        CopyWindowToVram(sMonSummaryScreen->window[3], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[5], 2);
+        break;
+    case 7:
+        if (!IsDma3ManagerBusyWithBgCopy())
+        {
+            CopyBgTilemapBufferToVram(0);
+            sub_8135514();
+            sMonSummaryScreen->unk3244 = TRUE;
+        }
+        else
+            return;
+        break;
+    case 8:
+        if (!sub_81357A0(sMonSummaryScreen->unk3224))
+            return;
+
+        PSS_AddTextToWin4();
+        CopyWindowToVram(sMonSummaryScreen->window[4], 2);
+        break;
+    case 9:
+        PSS_DrawMonMoveIcon();
+        PSS_AddTextToWin2(gText_8419C45);
+        break;
+    case 10:
+        sub_81356EC();
+        CopyWindowToVram(sMonSummaryScreen->window[6], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[2], 2);
+        break;
+    case 11:
+        if (!IsDma3ManagerBusyWithBgCopy())
+        {
+            CopyBgTilemapBufferToVram(0);
+        }
+        else
+            return;
+        break;
+    default:
+        PSS_SetHelpContext();
+        gTasks[sMonSummaryScreen->task].func = sub_8138CD8;
+        sMonSummaryScreen->unk3284 = 0;
+        sMonSummaryScreen->lockMovesFlag = FALSE;
+        sMonSummaryScreen->unk301C = FALSE;
+        return;
+    }
+
+    sMonSummaryScreen->unk3284++;
+    return;
+}
+
+static void sub_81351A0(u8 taskId)
+{
+    switch (sMonSummaryScreen->unk3284)
+    {
+    case 0:
+        sMonSummaryScreen->lockMovesFlag = TRUE;
+        sMonSummaryScreen->unk301C = TRUE;
+        sub_8138280(sMonSummaryScreen->curPageIndex);
+        break;
+    case 1:
+        break;
+    case 2:
+        sub_8135AA4();
+        break;
+    case 3:
+        PSS_AddTextToWin3();
+        PSS_AddTextToWin4();
+        PSS_AddTextToWin5();
+        CopyWindowToVram(sMonSummaryScreen->window[3], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[4], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[5], 2);
+        CopyBgTilemapBufferToVram(0);
+        break;
+    case 4:
+        if (gSaveBlock2Ptr->optionsLanguage == ENG)
+		{
+			PSS_AddTextToWin0(gText_8419C39);
+			PSS_AddTextToWin1(gText_8419C82);
+		}
+        if (gSaveBlock2Ptr->optionsLanguage == SPA)
+		{
+			PSS_AddTextToWin0(gText_8419C39Spa);
+			PSS_AddTextToWin1(gText_8419C82Spa);
+		}
+        break;
+    case 5:
+        CopyWindowToVram(sMonSummaryScreen->window[0], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[1], 2);
+        break;
+    case 6:
+        sub_8135514();
+        sMonSummaryScreen->unk3244 = TRUE;
+        sub_8135638();
+        PSS_DrawMonMoveIcon();
+        break;
+    case 7:
+        break;
+    case 8:
+        if (sub_81357A0(sMonSummaryScreen->unk3224) == 0)
+            return;
+
+        PSS_AddTextToWin2(gText_8419C45);
+        break;
+    case 9:
+        CopyWindowToVram(sMonSummaryScreen->window[6], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[2], 2);
+        CopyBgTilemapBufferToVram(0);
+        break;
+    case 10:
+        sub_8135B90();
+        sub_8138538();
+        sub_81356EC();
+        break;
+    default:
+        PSS_SetHelpContext();
+        gTasks[sMonSummaryScreen->task].func = sub_8134840;
+        sMonSummaryScreen->unk3284 = 0;
+        sMonSummaryScreen->lockMovesFlag = FALSE;
+        sMonSummaryScreen->unk301C = FALSE;
+        return;
+    }
+
+    sMonSummaryScreen->unk3284++;
+    return;
+}
+
+static void sub_8135514(void)
+{
+    s8 pageDelta = 1;
+
+    if (sMonSummaryScreen->unk3224 == 1)
+        pageDelta = -1;
+
+    if (sMonSummaryScreen->curPageIndex == PSS_PAGE_MOVES_INFO)
+    {
+        sMonSummaryScreen->unk324C = 240;
+        return;
+    }
+
+    if ((sMonSummaryScreen->curPageIndex + pageDelta) == PSS_PAGE_MOVES_INFO)
+    {
+        sMonSummaryScreen->unk324C = 0;
+        return;
+    }
+    if (sMonSummaryScreen->unk3224 == 1)
+        sMonSummaryScreen->unk324C = 0;
+    if (sMonSummaryScreen->curPageIndex != PSS_PAGE_SKILLS)
+	{
+		PSS_SetInvisibleHpBar(1);
+		PSS_SetInvisibleExpBar(1);
+	}
+    else
+	{
+		PSS_SetInvisibleHpBar(0);
+		PSS_SetInvisibleExpBar(0);
+	}
+}
+
+static void sub_8135638(void)
+{
+    u8 newPage;
+
+    if (sMonSummaryScreen->unk3224 == 1)
+        newPage = sMonSummaryScreen->curPageIndex - 1;
+    else
+        newPage = sMonSummaryScreen->curPageIndex + 1;
+
+    switch (newPage)
+    {
+    case PSS_PAGE_INFO:
+        PSS_SetInvisibleHpBar(1);
+        PSS_SetInvisibleExpBar(1);
+        break;
+    case PSS_PAGE_SKILLS:
+        PSS_SetInvisibleHpBar(0);
+        PSS_SetInvisibleExpBar(0);
+        break;
+    case PSS_PAGE_MOVES:
+        if (sMonSummaryScreen->unk3224 == 1)
+        {
+            PSS_SetInvisibleMonSprite(1);
+            PSS_SetInvisibleMarkings(1);
+            PSS_SetInvisiblePokeball(1);
+            PSS_SetInvisibleIconStatus(1);
+            sub_813ACF8(1);
+            sub_813AEB0(1);
+			PSS_SetInvisibleHpBar(1);
+			PSS_SetInvisibleExpBar(1);
+        }
+
+        break;
+    case PSS_PAGE_MOVES_INFO:
+        sub_813A0E8(1);
+        sub_8139EE4(1);
+        PSS_SetInvisibleIconStatus(1);
+        sub_813ACF8(1);
+        sub_813AEB0(1);
+        PSS_SetInvisibleHpBar(1);
+		PSS_SetInvisibleExpBar(1);
+        break;
+    }
+}
+
+static void sub_81356EC(void)
+{
+    u8 newPage;
+
+    if (sMonSummaryScreen->unk3224 == 1)
+        newPage = sMonSummaryScreen->curPageIndex - 1;
+    else
+        newPage = sMonSummaryScreen->curPageIndex + 1;
+
+    switch (newPage)
+    {
+    case PSS_PAGE_INFO:
+        PSS_SetInvisibleHpBar(1);
+        PSS_SetInvisibleExpBar(1);
+        break;
+    case PSS_PAGE_SKILLS:
+        break;
+    case PSS_PAGE_MOVES:
+        if (sMonSummaryScreen->unk3224 != 0)
+        {
+            sub_813A0E8(0);
+            sub_813ACF8(0);
+            sub_8139EE4(0);
+            sub_813AEB0(0);
+        }
+        break;
+    case PSS_PAGE_MOVES_INFO:
+        PSS_SetInvisibleMonSprite(0);
+        PSS_SetInvisibleMarkings(0);
+        PSS_SetInvisibleIconStatus(0);
+        PSS_SetInvisiblePokeball(0);
+        sub_813ACF8(0);
+        sub_813AEB0(0);
+        break;
+    }
+}
+
+static u8 sub_81357A0(u8 a0)
+{
+    s8 pageDelta = 1;
+
+    if (sMonSummaryScreen->unk3224 == 1)
+        pageDelta = -1;
+
+    if (sMonSummaryScreen->curPageIndex == PSS_PAGE_MOVES_INFO)
+        if (sMonSummaryScreen->unk324C <= 0)
+        {
+            sMonSummaryScreen->unk324C = 0;
+            sMonSummaryScreen->unk3238 ^= 1;
+            sMonSummaryScreen->unk3244 = FALSE;
+            return TRUE;
+        }
+
+    if ((sMonSummaryScreen->curPageIndex + pageDelta) == PSS_PAGE_MOVES_INFO)
+        if (sMonSummaryScreen->unk324C >= 240)
+        {
+            sMonSummaryScreen->unk324C = 240;
+            sMonSummaryScreen->unk3238 ^= 1;
+            sMonSummaryScreen->unk3244 = FALSE;
+            return TRUE;
+        }
+
+    if (sMonSummaryScreen->unk3224 == 1)
+    {
+        if (sMonSummaryScreen->unk324C >= 240)
+        {
+            sMonSummaryScreen->unk324C = 240;
+            sMonSummaryScreen->unk3238 ^= 1;
+            sMonSummaryScreen->unk3244 = FALSE;
+            return TRUE;
+        }
+    }
+    else if (sMonSummaryScreen->unk324C <= 0)
+    {
+        sMonSummaryScreen->unk3238 ^= 1;
+        sMonSummaryScreen->unk324C = 0;
+        sMonSummaryScreen->unk3244 = FALSE;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+static void sub_8135AA4(void)
+{
+    u8 newPage;
+
+    if (sMonSummaryScreen->unk3224 == 1)
+        newPage = sMonSummaryScreen->curPageIndex - 1;
+    else
+        newPage = sMonSummaryScreen->curPageIndex + 1;
+
+    switch (newPage)
+    {
+    case PSS_PAGE_INFO:
+        break;
+    case PSS_PAGE_SKILLS:
+        break;
+    case PSS_PAGE_MOVES:
+        break;
+    case PSS_PAGE_MOVES_INFO:
+        break;
+    }
+}
+
+static void sub_8135B90(void)
+{
+    u8 newPage;
+
+    if (sMonSummaryScreen->unk3224 == 1)
+        newPage = sMonSummaryScreen->curPageIndex - 1;
+    else
+        newPage = sMonSummaryScreen->curPageIndex + 1;
+
+    switch (newPage)
+    {
+    case PSS_PAGE_INFO:
+        break;
+    case PSS_PAGE_SKILLS:
+        break;
+    case PSS_PAGE_MOVES:
+        break;
+    case PSS_PAGE_MOVES_INFO:
+        break;
+    }
+}
+
+static void sub_8135C34(void)
+{
+    switch (sMonSummaryScreen->state3274)
+    {
+    case 0:
+        PSS_TurnOffScreen();
+        break;
+    case 1:
+        PSS_InitDisplay();
+        break;
+    case 2:
+        PSS_ResetAll();
+        break;
+    case 3:
+        if (!PSS_LoadTilesAndMap())
+            return;
+        break;
+    case 4:
+        if (!PSS_LoadSpritesData())
+            return;
+        break;
+    case 5:
+        PSS_InitWindows();
+        break;
+    case 6:
+        if (!sub_8136040())
+            return;
+        break;
+    case 7:
+        PSS_AddTextToWin3();
+        break;
+    case 8:
+        PSS_AddTextToWin4();
+        break;
+    case 9:
+        PSS_AddTextToWin5();
+        PSS_DrawMonMoveIcon();
+        break;
+    case 10:
+        sub_8138538();
+        break;
+    case 11:
+        break;
+    case 12:
+        BlendPalettes(0xffffffff, 16, 0);
+        sub_8137D28(sMonSummaryScreen->curPageIndex);
+        sub_8137E28();
+        break;
+    case 13:
+        BeginNormalPaletteFade(0xffffffff, 0, 16, 0, 0);
+        CopyWindowToVram(sMonSummaryScreen->window[0], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[1], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[2], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[3], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[4], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[5], 2);
+        CopyWindowToVram(sMonSummaryScreen->window[6], 2);
+        break;
+    case 14:
+        CopyBgTilemapBufferToVram(0);
+        break;
+    case 15:
+        if (sMonSummaryScreen->mode == PSS_MODE_SELECT_MOVE || sMonSummaryScreen->mode == PSS_MODE_FORGET_MOVE)
+        {
+            sub_8139EE4(0);
+            sub_813A0E8(0);
+        }
+        else
+        {
+            PSS_SetInvisibleMonSprite(0);
+            PSS_SetInvisibleMarkings(0);
+            PSS_SetInvisiblePokeball(0);
+        }
+
+		PSS_SetInvisibleHpBar(1);
+		PSS_SetInvisibleExpBar(1);
+        PSS_SetInvisibleIconStatus(0);
+        sub_813ACF8(0);
+        sub_813AEB0(0);
+        break;
+    default:
+        sub_81381C0();
+        sub_8136D54();
+        return;
+    }
+
+    sMonSummaryScreen->state3274++;
+}
+
+static u8 PSS_LoadTilesAndMap(void)
+{
+    switch (sMonSummaryScreen->unk3278)
+    {
+    case 0:
+        LoadPalette(gPalSummaryScreen, 0, 0x20);
+        break;
+    case 1:
+        ListMenuLoadStdPalAt(0x60, 1);
+        LoadPalette(sUnknown_84636C0, 0x70, 0x20);
+        break;
+    case 2:
+        LZ77UnCompVram(gTilesSummaryScreen, (void *)(VRAM));
+        break;
+    case 3:
+        LZ77UnCompVram(gMapSummaryScreenBg, (void *)(VRAM + 0xF800));
+        break;
+    case 4:
+        LZ77UnCompVram(gMapSummaryScreenBg, (void *)(VRAM + 0xF800));
+        break;
+    case 5:
+        LoadPalette(sUnknown_8463700, 0x80, 0x20);
+        return TRUE;
+    }
+
+    sMonSummaryScreen->unk3278++;
+    return FALSE;
+}
+
 static void PSS_GetDataPokemon(void)
 {
     u8 tempStr[20];
